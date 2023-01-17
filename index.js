@@ -14,13 +14,12 @@ app.use(express.json());
 
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.ifxvjm9.mongodb.net/?retryWrites=true&w=majority`;
-console.log(uri);
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
 async function run(){
     try{
         const productsCollection = client.db('fastGrocer').collection('products');
-        const categoriesCollection = client.db('fastGrocer').collection('categories');
+        const categoriesCollection = client.db('fastGrocer').collection('productCategory');
         const usersCollection = client.db('fastGrocer').collection('users');
 
         app.post('/products', async(req, res) => {
