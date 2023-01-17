@@ -21,6 +21,7 @@ async function run(){
     try{
         const productsCollection = client.db('fastGrocer').collection('products');
         const categoriesCollection = client.db('fastGrocer').collection('categories');
+        const usersCollection = client.db('fastGrocer').collection('users');
 
         app.post('/products', async(req, res) => {
             const product = req.body;
@@ -45,6 +46,26 @@ async function run(){
             const categories = await categoriesCollection.find(query).toArray();
             res.send(categories);
         })
+
+        app.get('/products/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id)};
+            const product = await productsCollection.findOne(query);
+            res.send(product);
+        })
+
+        app.post('/users', async (req, res) => {
+            const user = req.body;
+            const result = await usersCollection.insertOne(user);
+            res.send(result);
+        })
+
+        app.get('/users', async(req, res) => {
+            const query = {};
+            const users = await usersCollection.find(query).toArray();
+            res.send(users);
+        })
+
     }
     finally{
 
