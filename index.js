@@ -72,6 +72,13 @@ async function run(){
             res.send(users);
         })
 
+        app.get("/search", async (req, res) => {
+            const searchText = req.query.q;
+            const query = { $text: { $search: searchText } };
+            const matches = await productsCollection.find(query).toArray();
+            res.send(matches);
+          });
+
     }
     finally{
 
