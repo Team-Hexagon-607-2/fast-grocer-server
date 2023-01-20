@@ -21,6 +21,7 @@ async function run(){
         const productsCollection = client.db('fastGrocer').collection('products');
         const categoriesCollection = client.db('fastGrocer').collection('productCategory');
         const usersCollection = client.db('fastGrocer').collection('users');
+        const wishlistCollection = client.db('fastGrocer').collection('wishlist');
 
         app.post('/products', async(req, res) => {
             const product = req.body;
@@ -77,6 +78,55 @@ async function run(){
             const query = { $text: { $search: searchText } };
             const matches = await productsCollection.find(query).toArray();
             res.send(matches);
+          });
+
+          app.post("/wishlist", async (req, res) => {
+            try {
+              const newData = req.body;
+              const query = {
+                productId: newData?.productId,
+              };
+
+              const alreadyWishlistItem = await wishlistCollection.findOne(query);
+
+              if (alreadyWishlistItem === true) {
+                return res
+                  .status(400)
+                  .json({ status: false, message: "Already booked this item" });
+              } else {
+                await wishlistCollection.insertOne(newData);
+
+                res
+                  .status(200)
+                  .json({ status: true, message: "Added Product on Wishlist" });
+              }
+            } catch (error) {
+              res.status(400).json({ status: false, message: error.message });
+            }
+          });
+
+          app.get("/wishlist/:email", async (req, res) => {
+            try {
+              const email = req.params.email;
+
+              const wishlistByEmail = await wishlistCollection.find({ email: email })
+                .sort({ createdAt: -1 })
+                .toArray();
+              res.status(200).json({ status: true, data: wishlistByEmail });
+            } catch (error) {
+              res.status(400).json({ status: false, message: error.message });
+            }
+          });
+
+          app.delete("/wishlist/:id",async (req, res) => {
+            try {
+              const id = req.params.id;
+              const filter = { _id: ObjectId(id) };
+              await wishlistCollection.deleteOne(filter);
+              res.status(200).json({ status: true, message: "Item Delete Successfully" });
+            } catch (error) {
+              res.status(400).json({ status: false, message: error.message });
+            }
           });
 
     }
