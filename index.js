@@ -33,45 +33,45 @@ async function run(){
             const query = {};
             const products = await productsCollection.find(query).toArray();
             res.send(products);
-        })
+        });
 
         app.get('/products/:id', async(req, res) =>{
             const id = req.params.id;
             const query = {_id: ObjectId(id)}
             const result = await productsCollection.findOne(query);
             res.send(result);
-        })
+        });
 
         app.post('/categories', async(req, res) => {
             const category = req.body;
             const result = await categoriesCollection.insertOne(category);
             res.send(result);
-        })
+        });
 
         app.get('/categories', async(req, res) => {
             const query = {};
             const categories = await categoriesCollection.find(query).toArray();
             res.send(categories);
-        })
+        });
 
         app.get('/products/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: ObjectId(id)};
             const product = await productsCollection.findOne(query);
             res.send(product);
-        })
+        });
 
         app.post('/users', async (req, res) => {
             const user = req.body;
             const result = await usersCollection.insertOne(user);
             res.send(result);
-        })
+        });
 
         app.get('/users', async(req, res) => {
             const query = {};
             const users = await usersCollection.find(query).toArray();
             res.send(users);
-        })
+        });
 
         app.get("/search", async (req, res) => {
             const searchText = req.query.q;
@@ -127,6 +127,39 @@ async function run(){
             } catch (error) {
               res.status(400).json({ status: false, message: error.message });
             }
+          });
+
+          app.get('/buyers', async (req, res) => {
+            const query = { role : "buyer" };
+            const buyers = await usersCollection.find(query).toArray();
+            res.send(buyers);
+          });
+
+          app.get('/deliverymen', async (req, res) => {
+            const query = { role : "delivery man" };
+            const deliverymen = await usersCollection.find(query).toArray();
+            res.send(deliverymen);
+          });
+
+          app.get('/users/admin/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { email }
+            const user = await usersCollection.findOne(query);
+            res.send({ isAdmin: user?.role === 'admin' });
+          });
+
+          app.get('/users/deliverymen/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { email }
+            const user = await usersCollection.findOne(query);
+            res.send({ isDeliveryman: user?.role === 'delivery man' });
+          });
+
+          app.get('/users/buyers/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { email }
+            const user = await usersCollection.findOne(query);
+            res.send({ isBuyer: user?.role === 'buyer' });
           });
 
     }
