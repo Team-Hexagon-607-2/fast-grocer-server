@@ -4,6 +4,7 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 
 const port = process.env.PORT || 5000;
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 const app = express();
 
@@ -212,6 +213,57 @@ async function run() {
         res.status(400).json({ status: false, message: error.message });
       }
     });
+
+    //Payment
+    app.post("/create-payment-intent", async (req, res) => {
+      const price = req.body.price;
+      // const convertDollar = price / 110;
+      const amount = parseFloat(price) * 100;
+      console.log(amount);
+
+      try {
+        const paymentIntent = await stripe.paymentIntents.create({
+          currency: "usd",
+          amount: amount,
+          payment_method_types: ["card"],
+          description: "Payment for item",
+        });
+        res.send({
+          clientSecret: paymentIntent.client_secret,
+        });
+      } catch (error) {
+        res.status(500).json({ status: false, message: error.message });
+      }
+    });
+    ////////////////////////////////////////////////////////////////
+    //Save Payment on Database
+    // app.post("/order", async (req, res) => {
+    //   const payment = req.body;
+
+    //   const result = await Payments.insertOne(payment);
+    //   const id = payment.bookingId;
+    //   const itemId = payment.itemId;
+
+    //   const filter = { _id: ObjectId(id) };
+    //   const updatedDoc = {
+    //     $set: {
+    //       paid: true,
+    //       transactionId: payment.transactionId,
+    //     },
+    //   };
+    //   await Bookings.updateOne(filter, updatedDoc);
+    //   await Products.updateOne(
+    //     { _id: ObjectId(itemId) },
+    //     {
+    //       $set: {
+    //         advertise: "null",
+    //         status: "paid",
+    //         transactionId: payment.transactionId,
+    //       },
+    //     }
+    //   );
+    //   res.send(result);
+    // });
   } finally {
   }
 }
