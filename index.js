@@ -214,6 +214,67 @@ async function run() {
       }
     });
 
+    app.get("/order", async (req, res) => {
+      try {
+        const order = await orderCollection
+          .find({})
+          .sort({ createdAt: -1 })
+          .toArray();
+
+        res.status(200).json({ status: true, data: order });
+      } catch (error) {
+        res.status(400).json({ status: false, message: error.message });
+      }
+    });
+    app.get("/cancel-order", async (req, res) => {
+      try {
+        const order = await orderCollection
+          .find({})
+          .sort({ createdAt: -1 })
+          .toArray();
+
+        res.status(200).json({ status: true, data: order });
+      } catch (error) {
+        res.status(400).json({ status: false, message: error.message });
+      }
+    });
+
+    app.patch("/order/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const status = req.body.status;
+        const filter = { _id: ObjectId(id) };
+        const update = {
+          $set: {
+            status: status,
+          },
+        };
+        await orderCollection.updateOne(filter, update);
+
+        res.status(200).json({ status: true, message: `${status} Updated` });
+      } catch (error) {
+        res.status(400).json({ status: false, message: error.message });
+      }
+    });
+
+    app.patch("/cancel-order/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const cancel = req.body.cancel;
+        const filter = { _id: ObjectId(id) };
+        const update = {
+          $set: {
+            cancel: cancel,
+          },
+        };
+        await orderCollection.updateOne(filter, update);
+
+        res.status(200).json({ status: true, message: `${status} Updated` });
+      } catch (error) {
+        res.status(400).json({ status: false, message: error.message });
+      }
+    });
+
     //Payment
     app.post("/create-payment-intent", async (req, res) => {
       const price = req.body.price;
@@ -236,34 +297,6 @@ async function run() {
       }
     });
     ////////////////////////////////////////////////////////////////
-    //Save Payment on Database
-    // app.post("/order", async (req, res) => {
-    //   const payment = req.body;
-
-    //   const result = await Payments.insertOne(payment);
-    //   const id = payment.bookingId;
-    //   const itemId = payment.itemId;
-
-    //   const filter = { _id: ObjectId(id) };
-    //   const updatedDoc = {
-    //     $set: {
-    //       paid: true,
-    //       transactionId: payment.transactionId,
-    //     },
-    //   };
-    //   await Bookings.updateOne(filter, updatedDoc);
-    //   await Products.updateOne(
-    //     { _id: ObjectId(itemId) },
-    //     {
-    //       $set: {
-    //         advertise: "null",
-    //         status: "paid",
-    //         transactionId: payment.transactionId,
-    //       },
-    //     }
-    //   );
-    //   res.send(result);
-    // });
   } finally {
   }
 }
