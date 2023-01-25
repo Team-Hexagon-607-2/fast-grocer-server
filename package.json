@@ -1,7 +1,6 @@
 {
   "name": "fast-grocer-server",
   "version": "1.0.0",
-  "description": "",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
@@ -15,6 +14,17 @@
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
     "express": "^4.18.2",
-    "mongodb": "^4.13.0"
-  }
+    "mongodb": "^4.13.0",
+    "nodemon": "^2.0.20",
+    "stripe": "^11.7.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Team-Hexagon-607-2/fast-grocer-server.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Team-Hexagon-607-2/fast-grocer-server/issues"
+  },
+  "homepage": "https://github.com/Team-Hexagon-607-2/fast-grocer-server#readme",
+  "description": ""
 }
