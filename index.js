@@ -22,6 +22,7 @@ async function run(){
         const productsCollection = client.db('fastGrocer').collection('products');
         const categoriesCollection = client.db('fastGrocer').collection('categories');
         const usersCollection = client.db('fastGrocer').collection('users');
+        const reviewsCollection = client.db('fastGrocer').collection('reviews');
 
         app.post('/products', async(req, res) => {
             const product = req.body;
@@ -66,6 +67,20 @@ async function run(){
             res.send(users);
         })
 
+        app.post('/reviews', async (req, res) => {
+            const review = req.body;
+            const result = await reviewsCollection.insertOne(review);
+            res.send(result);
+        })
+
+        app.get('/reviews', async (req, res) => {
+            const query = {};
+            const cursor = reviewsCollection.find(query);
+            const reviews = await cursor.toArray();
+            res.send(reviews);
+        })
+
+      
     }
     finally{
 
