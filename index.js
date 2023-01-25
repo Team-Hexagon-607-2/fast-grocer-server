@@ -151,6 +151,73 @@ async function run() {
       res.send(deliverymen);
     });
 
+    app.get('/deliveryman-work-status', async(req, res) =>{
+      const email = req.query.email;
+      const query = { email: email };
+      const result = await usersCollection.findOne(query);
+      res.send(result);
+    })
+
+    app.put("/deliveryman", async (req, res) => {
+      const email = req.query.email;
+      const filter = { email: email };
+      const certification = req.body.certification;
+      const result = await usersCollection.findOne(filter);
+      if (result) {
+        const option = { upsert: true };
+        const updatedDoc = {
+          $set: {
+            verified: false,
+            workPermitStatus: "pending",
+            certification: certification
+          }
+        }
+        const updateResult = await usersCollection.updateOne(filter, updatedDoc, option);
+        res.send(updateResult);
+      }
+      else{
+        return;
+      }
+    })
+
+    // delivery man's request accept 
+    app.put('/deliveryman-request-accept', async(req, res) =>{
+      const email = req.query.email;
+      const filter = { email: email };
+      const result = await usersCollection.findOne(filter);
+      if(result){
+        const updatedDoc = {
+          $set: {
+            verified: true,
+            workPermitStatus: "Accepted"
+          }
+        }
+        const updateResult = await usersCollection.updateOne(filter, updatedDoc);
+        res.send(updateResult);
+      }else{
+        return;
+      }
+    })
+
+    // delivery man's request reject
+    app.put('/deliveryman-request-reject', async(req, res) =>{
+      const email = req.query.email;
+      const filter = { email: email };
+      const result = await usersCollection.findOne(filter);
+      if(result){
+        const updatedDoc = {
+          $set: {
+            verified: false,
+            workPermitStatus: "Rejected"
+          }
+        }
+        const updateResult = await usersCollection.updateOne(filter, updatedDoc);
+        res.send(updateResult);
+      }else{
+        return;
+      }
+    })
+
     app.get("/users/admin/:email", async (req, res) => {
       const email = req.params.email;
       const query = { email };
