@@ -189,7 +189,26 @@ async function run() {
         const updatedDoc = {
           $set: {
             verified: true,
-            workPermitStatus: "Accepeted"
+            workPermitStatus: "Accepted"
+          }
+        }
+        const updateResult = await usersCollection.updateOne(filter, updatedDoc);
+        res.send(updateResult);
+      }else{
+        return;
+      }
+    })
+
+    // delivery man's request reject
+    app.put('/deliveryman-request-reject', async(req, res) =>{
+      const email = req.query.email;
+      const filter = { email: email };
+      const result = await usersCollection.findOne(filter);
+      if(result){
+        const updatedDoc = {
+          $set: {
+            verified: false,
+            workPermitStatus: "Rejected"
           }
         }
         const updateResult = await usersCollection.updateOne(filter, updatedDoc);
