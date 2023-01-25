@@ -29,6 +29,9 @@ async function run() {
     const usersCollection = client.db("fastGrocer").collection("users");
     const wishlistCollection = client.db("fastGrocer").collection("wishlist");
     const orderCollection = client.db("fastGrocer").collection("order");
+    const deliveryOrderCollection = client
+      .db("fastGrocer")
+      .collection("deliveryOrder");
 
     app.post("/products", async (req, res) => {
       const product = req.body;
@@ -280,6 +283,19 @@ async function run() {
         res.status(400).json({ status: false, message: error.message });
       }
     });
+    app.get("/delivery-order/:email", async (req, res) => {
+      try {
+        const email = req.params.email;
+        const order = await orderCollection
+          .find({ deliveryManEmail: email })
+          .sort({ deliveryAssignTime: -1 })
+          .toArray();
+
+        res.status(200).json({ status: true, data: order });
+      } catch (error) {
+        res.status(400).json({ status: false, message: error.message });
+      }
+    });
 
     app.get("/order", async (req, res) => {
       try {
@@ -323,7 +339,44 @@ async function run() {
         res.status(400).json({ status: false, message: error.message });
       }
     });
+    app.patch("/delivery-order/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const picked = req.body.picked;
+        const filter = { _id: ObjectId(id) };
+        const update = {
+          $set: {
+            pick: picked,
+            status: "On The Way",
+          },
+        };
+        await orderCollection.updateOne(filter, update);
 
+        res.status(200).json({ status: true, message: `Updated` });
+      } catch (error) {
+        res.status(400).json({ status: false, message: error.message });
+      }
+    });
+    app.patch("/delivery-complete/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const status = req.body.status;
+        const filter = { _id: ObjectId(id) };
+        const update = {
+          $set: {
+            pick: "Already Picked & Delivered",
+            status: status,
+            paid: true,
+            deliveryTime: new Date(),
+          },
+        };
+        await orderCollection.updateOne(filter, update);
+
+        res.status(200).json({ status: true, message: `Updated` });
+      } catch (error) {
+        res.status(400).json({ status: false, message: error.message });
+      }
+    });
     app.patch("/cancel-order/:id", async (req, res) => {
       try {
         const id = req.params.id;
@@ -337,6 +390,29 @@ async function run() {
         await orderCollection.updateOne(filter, update);
 
         res.status(200).json({ status: true, message: `${status} Updated` });
+      } catch (error) {
+        res.status(400).json({ status: false, message: error.message });
+      }
+    });
+
+    app.patch("/update-delivery-order/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const data = req.body;
+
+        const filter = { _id: ObjectId(id) };
+        const update = {
+          $set: {
+            deliveryManEmail: data?.deliveryManEmail,
+            deliveryManName: data?.deliveryManName,
+            deliveryAssignTime: new Date(),
+          },
+        };
+        await orderCollection.updateOne(filter, update);
+
+        res
+          .status(200)
+          .json({ status: true, message: "updated delivery status" });
       } catch (error) {
         res.status(400).json({ status: false, message: error.message });
       }
