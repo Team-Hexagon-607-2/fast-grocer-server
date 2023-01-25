@@ -180,6 +180,25 @@ async function run() {
       }
     })
 
+    // delivery man's request accept 
+    app.put('/deliveryman-request-accept', async(req, res) =>{
+      const email = req.query.email;
+      const filter = { email: email };
+      const result = await usersCollection.findOne(filter);
+      if(result){
+        const updatedDoc = {
+          $set: {
+            verified: true,
+            workPermitStatus: "Accepeted"
+          }
+        }
+        const updateResult = await usersCollection.updateOne(filter, updatedDoc);
+        res.send(updateResult);
+      }else{
+        return;
+      }
+    })
+
     app.get("/users/admin/:email", async (req, res) => {
       const email = req.params.email;
       const query = { email };
