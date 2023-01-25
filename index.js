@@ -45,6 +45,17 @@ async function run() {
       res.send(products);
     });
 
+    app.get("/AllProducts", async(req, res) => {
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
+
+      const query = {};
+      const cursor = productsCollection.find(query);
+      const products = await cursor.skip(page * size).limit(size).toArray();
+      const count = await productsCollection.estimatedDocumentCount();
+      res.send({products, count});
+    });
+
     app.get("/products/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
