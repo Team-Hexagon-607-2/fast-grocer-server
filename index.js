@@ -46,6 +46,17 @@ async function run() {
       res.send(products);
     });
 
+    app.get("/AllProducts", async(req, res) => {
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
+
+      const query = {};
+      const cursor = productsCollection.find(query);
+      const products = await cursor.skip(page * size).limit(size).toArray();
+      const count = await productsCollection.estimatedDocumentCount();
+      res.send({products, count});
+    });
+
     app.get("/products/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
@@ -169,12 +180,12 @@ async function run() {
       res.send(deliverymen);
     });
 
-    app.get('/deliveryman-work-status', async(req, res) =>{
+    app.get("/deliveryman-work-status", async (req, res) => {
       const email = req.query.email;
       const query = { email: email };
       const result = await usersCollection.findOne(query);
       res.send(result);
-    })
+    });
 
     app.put("/deliveryman", async (req, res) => {
       const email = req.query.email;
@@ -187,54 +198,63 @@ async function run() {
           $set: {
             verified: false,
             workPermitStatus: "pending",
-            certification: certification
-          }
-        }
-        const updateResult = await usersCollection.updateOne(filter, updatedDoc, option);
+            certification: certification,
+          },
+        };
+        const updateResult = await usersCollection.updateOne(
+          filter,
+          updatedDoc,
+          option
+        );
         res.send(updateResult);
-      }
-      else{
+      } else {
         return;
       }
-    })
+    });
 
-    // delivery man's request accept 
-    app.put('/deliveryman-request-accept', async(req, res) =>{
+    // delivery man's request accept
+    app.put("/deliveryman-request-accept", async (req, res) => {
       const email = req.query.email;
       const filter = { email: email };
       const result = await usersCollection.findOne(filter);
-      if(result){
+      if (result) {
         const updatedDoc = {
           $set: {
             verified: true,
-            workPermitStatus: "Accepted"
-          }
-        }
-        const updateResult = await usersCollection.updateOne(filter, updatedDoc);
+            workPermitStatus: "Accepted",
+          },
+        };
+        const updateResult = await usersCollection.updateOne(
+          filter,
+          updatedDoc
+        );
         res.send(updateResult);
-      }else{
+      } else {
         return;
       }
-    })
+    });
 
     // delivery man's request reject
-    app.put('/deliveryman-request-reject', async(req, res) =>{
+    app.put("/deliveryman-request-reject", async (req, res) => {
       const email = req.query.email;
       const filter = { email: email };
       const result = await usersCollection.findOne(filter);
-      if(result){
+      if (result) {
         const updatedDoc = {
           $set: {
             verified: false,
-            workPermitStatus: "Rejected"
-          }
-        }
-        const updateResult = await usersCollection.updateOne(filter, updatedDoc);
+            workPermitStatus: "Rejected",
+          },
+        };
+        const updateResult = await usersCollection.updateOne(
+          filter,
+          updatedDoc
+        );
         res.send(updateResult);
-      }else{
+      } else {
         return;
       }
-    })
+    });
 
     app.get("/users/admin/:email", async (req, res) => {
       const email = req.params.email;
@@ -382,6 +402,7 @@ async function run() {
             pick: "Already Picked & Delivered",
             status: status,
             paid: true,
+            deliver: true,
             deliveryTime: new Date(),
           },
         };
