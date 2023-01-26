@@ -29,6 +29,10 @@ async function run() {
     const usersCollection = client.db("fastGrocer").collection("users");
     const wishlistCollection = client.db("fastGrocer").collection("wishlist");
     const orderCollection = client.db("fastGrocer").collection("order");
+    const reviewsCollection = client.db("fastGrocer").collection("reviews");
+    const deliveryOrderCollection = client
+      .db("fastGrocer")
+      .collection("deliveryOrder");
 
     app.post("/products", async (req, res) => {
       const product = req.body;
@@ -40,6 +44,17 @@ async function run() {
       const query = {};
       const products = await productsCollection.find(query).toArray();
       res.send(products);
+    });
+
+    app.get("/AllProducts", async(req, res) => {
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
+
+      const query = {};
+      const cursor = productsCollection.find(query);
+      const products = await cursor.skip(page * size).limit(size).toArray();
+      const count = await productsCollection.estimatedDocumentCount();
+      res.send({products, count});
     });
 
     app.get("/products/:id", async (req, res) => {
@@ -79,6 +94,20 @@ async function run() {
       const users = await usersCollection.find(query).toArray();
       res.send(users);
     });
+    
+    app.post("/reviews", async (req, res) => {
+        const review = req.body;
+        const result = await reviewsCollection.insertOne(review);
+        res.send(result);
+    })
+
+    app.get("/reviews", async (req, res) => {
+        const query = {};
+        const reviews = await reviewsCollection.find(query).toArray();
+        res.send(reviews);
+    })
+
+    
 
     app.get("/search", async (req, res) => {
       const searchText = req.query.q;
@@ -151,12 +180,12 @@ async function run() {
       res.send(deliverymen);
     });
 
-    app.get('/deliveryman-work-status', async(req, res) =>{
+    app.get("/deliveryman-work-status", async (req, res) => {
       const email = req.query.email;
       const query = { email: email };
       const result = await usersCollection.findOne(query);
       res.send(result);
-    })
+    });
 
     app.put("/deliveryman", async (req, res) => {
       const email = req.query.email;
@@ -169,51 +198,60 @@ async function run() {
           $set: {
             verified: false,
             workPermitStatus: "pending",
-            certification: certification
-          }
-        }
-        const updateResult = await usersCollection.updateOne(filter, updatedDoc, option);
+            certification: certification,
+          },
+        };
+        const updateResult = await usersCollection.updateOne(
+          filter,
+          updatedDoc,
+          option
+        );
         res.send(updateResult);
-      }
-      else{
+      } else {
         return;
       }
-    })
+    });
 
-    // delivery man's request accept 
-    app.put('/deliveryman-request-accept', async(req, res) =>{
+    // delivery man's request accept
+    app.put("/deliveryman-request-accept", async (req, res) => {
       const email = req.query.email;
       const filter = { email: email };
       const result = await usersCollection.findOne(filter);
-      if(result){
+      if (result) {
         const updatedDoc = {
           $set: {
             verified: true,
-            workPermitStatus: "Accepted"
-          }
-        }
-        const updateResult = await usersCollection.updateOne(filter, updatedDoc);
+            workPermitStatus: "Accepted",
+          },
+        };
+        const updateResult = await usersCollection.updateOne(
+          filter,
+          updatedDoc
+        );
         res.send(updateResult);
-      }else{
+      } else {
         return;
       }
-    })
+    });
 
     // delivery man's request reject
-    app.put('/deliveryman-request-reject', async(req, res) =>{
+    app.put("/deliveryman-request-reject", async (req, res) => {
       const email = req.query.email;
       const filter = { email: email };
       const result = await usersCollection.findOne(filter);
-      if(result){
+      if (result) {
         const updatedDoc = {
           $set: {
             verified: false,
-            workPermitStatus: "Rejected"
-          }
-        }
-        const updateResult = await usersCollection.updateOne(filter, updatedDoc);
+            workPermitStatus: "Rejected",
+          },
+        };
+        const updateResult = await usersCollection.updateOne(
+          filter,
+          updatedDoc
+        );
         res.send(updateResult);
-      }else{
+      } else {
         return;
       }
     })
@@ -289,6 +327,19 @@ async function run() {
         res.status(400).json({ status: false, message: error.message });
       }
     });
+    app.get("/delivery-order/:email", async (req, res) => {
+      try {
+        const email = req.params.email;
+        const order = await orderCollection
+          .find({ deliveryManEmail: email })
+          .sort({ deliveryAssignTime: -1 })
+          .toArray();
+
+        res.status(200).json({ status: true, data: order });
+      } catch (error) {
+        res.status(400).json({ status: false, message: error.message });
+      }
+    });
 
     app.get("/order", async (req, res) => {
       try {
@@ -332,7 +383,45 @@ async function run() {
         res.status(400).json({ status: false, message: error.message });
       }
     });
+    app.patch("/delivery-order/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const picked = req.body.picked;
+        const filter = { _id: ObjectId(id) };
+        const update = {
+          $set: {
+            pick: picked,
+            status: "On The Way",
+          },
+        };
+        await orderCollection.updateOne(filter, update);
 
+        res.status(200).json({ status: true, message: `Updated` });
+      } catch (error) {
+        res.status(400).json({ status: false, message: error.message });
+      }
+    });
+    app.patch("/delivery-complete/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const status = req.body.status;
+        const filter = { _id: ObjectId(id) };
+        const update = {
+          $set: {
+            pick: "Already Picked & Delivered",
+            status: status,
+            paid: true,
+            deliver: true,
+            deliveryTime: new Date(),
+          },
+        };
+        await orderCollection.updateOne(filter, update);
+
+        res.status(200).json({ status: true, message: `Updated` });
+      } catch (error) {
+        res.status(400).json({ status: false, message: error.message });
+      }
+    });
     app.patch("/cancel-order/:id", async (req, res) => {
       try {
         const id = req.params.id;
@@ -346,6 +435,29 @@ async function run() {
         await orderCollection.updateOne(filter, update);
 
         res.status(200).json({ status: true, message: `${status} Updated` });
+      } catch (error) {
+        res.status(400).json({ status: false, message: error.message });
+      }
+    });
+
+    app.patch("/update-delivery-order/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const data = req.body;
+
+        const filter = { _id: ObjectId(id) };
+        const update = {
+          $set: {
+            deliveryManEmail: data?.deliveryManEmail,
+            deliveryManName: data?.deliveryManName,
+            deliveryAssignTime: new Date(),
+          },
+        };
+        await orderCollection.updateOne(filter, update);
+
+        res
+          .status(200)
+          .json({ status: true, message: "updated delivery status" });
       } catch (error) {
         res.status(400).json({ status: false, message: error.message });
       }
