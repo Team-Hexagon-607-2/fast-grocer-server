@@ -217,6 +217,15 @@ async function run() {
         return;
       }
     })
+    app.get('/delivered-orders', async(req, res) =>{
+      const email = req.query.email;
+      const query = {
+        deliveryManEmail: email,
+        deliver : true
+      };
+      const result = await orderCollection.find(query).toArray();
+      res.send(result);
+    })
 
     app.get("/users/admin/:email", async (req, res) => {
       const email = req.params.email;
