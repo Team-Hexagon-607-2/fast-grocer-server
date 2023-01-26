@@ -29,6 +29,7 @@ async function run() {
     const usersCollection = client.db("fastGrocer").collection("users");
     const wishlistCollection = client.db("fastGrocer").collection("wishlist");
     const orderCollection = client.db("fastGrocer").collection("order");
+    const reviewsCollection = client.db("fastGrocer").collection("reviews");
     const deliveryOrderCollection = client
       .db("fastGrocer")
       .collection("deliveryOrder");
@@ -82,6 +83,20 @@ async function run() {
       const users = await usersCollection.find(query).toArray();
       res.send(users);
     });
+    
+    app.post("/reviews", async (req, res) => {
+        const review = req.body;
+        const result = await reviewsCollection.insertOne(review);
+        res.send(result);
+    })
+
+    app.get("/reviews", async (req, res) => {
+        const query = {};
+        const reviews = await reviewsCollection.find(query).toArray();
+        res.send(reviews);
+    })
+
+    
 
     app.get("/search", async (req, res) => {
       const searchText = req.query.q;
