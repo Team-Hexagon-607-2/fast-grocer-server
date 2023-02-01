@@ -255,6 +255,7 @@ async function run() {
         return;
       }
     })
+
     app.get('/delivered-orders', async(req, res) =>{
       const email = req.query.email;
       const query = {
@@ -365,6 +366,22 @@ async function run() {
         res.status(400).json({ status: false, message: error.message });
       }
     });
+
+    // order return request
+    app.put("/return-request/:id", async(req, res) =>{
+      const id = req.params.id;
+      const photo = req.body.productPhoto;
+      const query = {_id: ObjectId(id)};
+      const updatedDoc = {
+        $set: {
+          returnRequest: true,
+          returnReason: req.body.returnReason,
+          photo: photo
+        }
+      }
+      const result = await orderCollection.findOne(query, updatedDoc);
+      res.send(result);
+    })
 
     app.patch("/order/:id", async (req, res) => {
       try {
