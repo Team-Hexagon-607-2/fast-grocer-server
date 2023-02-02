@@ -479,7 +479,16 @@ async function run() {
       const id = req.query.id;
       const query = {_id: ObjectId(id)};
       const findResult = await orderCollection.findOne(query);
-      res.send(findResult);
+      if(findResult){
+        const updatedDoc = {
+          $set: {
+            returnRequest: false,
+            acceptReturnRequest: false
+          }
+        }
+        const updateResult = await orderCollection.updateOne(query, updatedDoc);
+        res.send(updateResult);
+      }
     })
 
 
