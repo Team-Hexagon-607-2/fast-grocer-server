@@ -462,6 +462,23 @@ async function run() {
       const id = req.query.id;
       const query = {_id: ObjectId(id)};
       const findResult = await orderCollection.findOne(query);
+      if(findResult){
+        const updatedDoc = {
+          $set: {
+            returnRequest: false,
+            acceptReturnRequest: true
+          }
+        }
+        const updateResult = await orderCollection.updateOne(query, updatedDoc);
+        res.send(updateResult);
+      }
+    })
+
+    // api for reject return product request
+    app.put("/return-request-reject", async(req, res) =>{
+      const id = req.query.id;
+      const query = {_id: ObjectId(id)};
+      const findResult = await orderCollection.findOne(query);
       res.send(findResult);
     })
 
