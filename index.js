@@ -376,10 +376,10 @@ async function run() {
         $set: {
           returnRequest: true,
           returnReason: req.body.returnReason,
-          photo: photo
+          productPhoto: photo
         }
       }
-      const result = await orderCollection.findOne(query, updatedDoc);
+      const result = await orderCollection.updateOne(query, updatedDoc);
       res.send(result);
     })
 
@@ -456,6 +456,15 @@ async function run() {
         res.status(400).json({ status: false, message: error.message });
       }
     });
+
+    // api for accept return product request
+    app.put("/return-request-accept", async(req, res) =>{
+      const id = req.query.id;
+      const query = {_id: ObjectId(id)};
+      const findResult = await orderCollection.findOne(query);
+      res.send(findResult);
+    })
+
 
     app.patch("/update-delivery-order/:id", async (req, res) => {
       try {
