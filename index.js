@@ -46,7 +46,7 @@ async function run() {
       res.send(products);
     });
 
-    app.get("/AllProducts", async(req, res) => {
+    app.get("/AllProducts", async (req, res) => {
       const page = parseInt(req.query.page);
       const size = parseInt(req.query.size);
 
@@ -54,7 +54,7 @@ async function run() {
       const cursor = productsCollection.find(query);
       const products = await cursor.skip(page * size).limit(size).toArray();
       const count = await productsCollection.estimatedDocumentCount();
-      res.send({products, count});
+      res.send({ products, count });
     });
 
     app.get("/products/:id", async (req, res) => {
@@ -63,6 +63,49 @@ async function run() {
       const result = await productsCollection.findOne(query);
       res.send(result);
     });
+
+    // Edit individual product data
+    app.put('/product/:id', async (req, res) => {
+      const id = req.params.id;
+      const updatedProductData = req.body;
+      const filter = { _id: ObjectId(id) };
+      if (updatedProductData?.imageUrl) {
+        const updatedDoc = {
+          $set: {
+            name: updatedProductData?.name,
+            category_name: updatedProductData?.category_name,
+            original_price: updatedProductData?.original_price,
+            save: updatedProductData?.save,
+            price: updatedProductData?.price,
+            bundle: updatedProductData?.bundle,
+            quantity: updatedProductData?.quantity,
+            stock: updatedProductData?.stock,
+            sub_category: updatedProductData?.sub_category,
+            imageUrl: updatedProductData?.imageUrl,
+            description: updatedProductData?.description,
+          }
+        }
+        const result = await productsCollection.updateOne(filter, updatedDoc);
+        res.send(result);
+      } else {
+        const updatedDoc = {
+          $set: {
+            name: updatedProductData?.name,
+            category_name: updatedProductData?.category_name,
+            original_price: updatedProductData?.original_price,
+            save: updatedProductData?.save,
+            price: updatedProductData?.price,
+            bundle: updatedProductData?.bundle,
+            quantity: updatedProductData?.quantity,
+            stock: updatedProductData?.stock,
+            sub_category: updatedProductData?.sub_category,
+            description: updatedProductData?.description,
+          }
+        }
+        const result = await productsCollection.updateOne(filter, updatedDoc);
+        res.send(result);
+      }
+    })
 
     app.post("/categories", async (req, res) => {
       const category = req.body;
@@ -94,20 +137,20 @@ async function run() {
       const users = await usersCollection.find(query).toArray();
       res.send(users);
     });
-    
+
     app.post("/reviews", async (req, res) => {
-        const review = req.body;
-        const result = await reviewsCollection.insertOne(review);
-        res.send(result);
+      const review = req.body;
+      const result = await reviewsCollection.insertOne(review);
+      res.send(result);
     })
 
     app.get("/reviews", async (req, res) => {
-        const query = {};
-        const reviews = await reviewsCollection.find(query).toArray();
-        res.send(reviews);
+      const query = {};
+      const reviews = await reviewsCollection.find(query).toArray();
+      res.send(reviews);
     })
 
-    
+
 
     app.get("/search", async (req, res) => {
       const searchText = req.query.q;
@@ -255,11 +298,12 @@ async function run() {
         return;
       }
     })
-    app.get('/delivered-orders', async(req, res) =>{
+
+    app.get('/delivered-orders', async (req, res) => {
       const email = req.query.email;
       const query = {
         deliveryManEmail: email,
-        deliver : true
+        deliver: true
       };
       const result = await orderCollection.find(query).toArray();
       res.send(result);
@@ -366,6 +410,22 @@ async function run() {
       }
     });
 
+    // order return request
+    app.put("/return-request/:id", async (req, res) => {
+      const id = req.params.id;
+      const photo = req.body.productPhoto;
+      const query = { _id: ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          returnRequest: true,
+          returnReason: req.body.returnReason,
+          productPhoto: photo
+        }
+      }
+      const result = await orderCollection.updateOne(query, updatedDoc);
+      res.send(result);
+    })
+
     app.patch("/order/:id", async (req, res) => {
       try {
         const id = req.params.id;
@@ -439,6 +499,41 @@ async function run() {
         res.status(400).json({ status: false, message: error.message });
       }
     });
+
+    // api for accept return product request
+    app.put("/return-request-accept", async (req, res) => {
+      const id = req.query.id;
+      const query = { _id: ObjectId(id) };
+      const findResult = await orderCollection.findOne(query);
+      if (findResult) {
+        const updatedDoc = {
+          $set: {
+            returnRequest: false,
+            acceptReturnRequest: true
+          }
+        }
+        const updateResult = await orderCollection.updateOne(query, updatedDoc);
+        res.send(updateResult);
+      }
+    })
+
+    // api for reject return product request
+    app.put("/return-request-reject", async (req, res) => {
+      const id = req.query.id;
+      const query = { _id: ObjectId(id) };
+      const findResult = await orderCollection.findOne(query);
+      if (findResult) {
+        const updatedDoc = {
+          $set: {
+            returnRequest: false,
+            acceptReturnRequest: false
+          }
+        }
+        const updateResult = await orderCollection.updateOne(query, updatedDoc);
+        res.send(updateResult);
+      }
+    })
+
 
     app.patch("/update-delivery-order/:id", async (req, res) => {
       try {
