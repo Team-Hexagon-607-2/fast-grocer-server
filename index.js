@@ -31,8 +31,10 @@ async function run() {
     const orderCollection = client.db("fastGrocer").collection("order");
     const reviewsCollection = client.db("fastGrocer").collection("reviews");
     const deliveryOrderCollection = client
-      .db("fastGrocer")
-      .collection("deliveryOrder");
+    .db("fastGrocer")
+    .collection("deliveryOrder");
+    const couponsCollection = client.db("fastGrocer").collection("coupons");
+
 
     app.post("/add-product", async (req, res) => {
       const product = req.body;
@@ -150,7 +152,17 @@ async function run() {
       res.send(reviews);
     })
 
+    app.post("/add-coupon", async (req, res) =>{
+      const coupon = req.body;
+      const result = await couponsCollection.insertOne(coupon);
+      res.send(result);
+    })
 
+    app.get("/get-coupons", async(req, res) =>{
+      const query = {};
+      const result = await couponsCollection.find(query).toArray();
+      res.send(result);
+    })
 
     app.get("/search", async (req, res) => {
       const searchText = req.query.q;
