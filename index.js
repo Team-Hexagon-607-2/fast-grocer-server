@@ -46,15 +46,18 @@ async function run() {
       res.send(products);
     });
 
-    app.get("/AllProducts", async(req, res) => {
+    app.get("/AllProducts", async (req, res) => {
       const page = parseInt(req.query.page);
       const size = parseInt(req.query.size);
 
       const query = {};
       const cursor = productsCollection.find(query);
-      const products = await cursor.skip(page * size).limit(size).toArray();
+      const products = await cursor
+        .skip(page * size)
+        .limit(size)
+        .toArray();
       const count = await productsCollection.estimatedDocumentCount();
-      res.send({products, count});
+      res.send({ products, count });
     });
 
     app.get("/products/:id", async (req, res) => {
@@ -94,20 +97,18 @@ async function run() {
       const users = await usersCollection.find(query).toArray();
       res.send(users);
     });
-    
+
     app.post("/reviews", async (req, res) => {
-        const review = req.body;
-        const result = await reviewsCollection.insertOne(review);
-        res.send(result);
-    })
+      const review = req.body;
+      const result = await reviewsCollection.insertOne(review);
+      res.send(result);
+    });
 
     app.get("/reviews", async (req, res) => {
-        const query = {};
-        const reviews = await reviewsCollection.find(query).toArray();
-        res.send(reviews);
-    })
-
-    
+      const query = {};
+      const reviews = await reviewsCollection.find(query).toArray();
+      res.send(reviews);
+    });
 
     app.get("/search", async (req, res) => {
       const searchText = req.query.q;
@@ -254,16 +255,16 @@ async function run() {
       } else {
         return;
       }
-    })
-    app.get('/delivered-orders', async(req, res) =>{
+    });
+    app.get("/delivered-orders", async (req, res) => {
       const email = req.query.email;
       const query = {
         deliveryManEmail: email,
-        deliver : true
+        deliver: true,
       };
       const result = await orderCollection.find(query).toArray();
       res.send(result);
-    })
+    });
 
     app.get("/users/admin/:email", async (req, res) => {
       const email = req.params.email;
@@ -434,7 +435,7 @@ async function run() {
         };
         await orderCollection.updateOne(filter, update);
 
-        res.status(200).json({ status: true, message: `${status} Updated` });
+        res.status(200).json({ status: true, message: `Updated` });
       } catch (error) {
         res.status(400).json({ status: false, message: error.message });
       }
