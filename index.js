@@ -31,10 +31,12 @@ async function run() {
     const orderCollection = client.db("fastGrocer").collection("order");
     const reviewsCollection = client.db("fastGrocer").collection("reviews");
     const deliveryOrderCollection = client
-      .db("fastGrocer")
-      .collection("deliveryOrder");
+    .db("fastGrocer")
+    .collection("deliveryOrder");
+    const couponsCollection = client.db("fastGrocer").collection("coupons");
 
-    app.post("/products", async (req, res) => {
+
+    app.post("/add-product", async (req, res) => {
       const product = req.body;
       const result = await productsCollection.insertOne(product);
       res.send(result);
@@ -150,7 +152,17 @@ async function run() {
       res.send(reviews);
     })
 
+    app.post("/add-coupon", async (req, res) =>{
+      const coupon = req.body;
+      const result = await couponsCollection.insertOne(coupon);
+      res.send(result);
+    })
 
+    app.get("/get-coupons", async(req, res) =>{
+      const query = {};
+      const result = await couponsCollection.find(query).toArray();
+      res.send(result);
+    })
 
     app.get("/search", async (req, res) => {
       const searchText = req.query.q;
@@ -410,7 +422,7 @@ async function run() {
       }
     });
 
-    // order return request
+    // product return request from buyer
     app.put("/return-request/:id", async (req, res) => {
       const id = req.params.id;
       const photo = req.body.productPhoto;
@@ -419,7 +431,7 @@ async function run() {
         $set: {
           returnRequest: true,
           returnReason: req.body.returnReason,
-          productPhoto: photo
+          returnProductPhoto: photo
         }
       }
       const result = await orderCollection.updateOne(query, updatedDoc);
