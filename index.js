@@ -22,9 +22,6 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    await client.connect();
-    console.log('DB connection')
-
     const productsCollection = client.db("fastGrocer").collection("products");
     const categoriesCollection = client
       .db("fastGrocer")
@@ -374,7 +371,6 @@ async function run() {
         res.status(400).json({ status: false, message: error.message });
       }
     });
-
     app.get("/order/:email", async (req, res) => {
       try {
         const email = req.params.email;
@@ -388,14 +384,6 @@ async function run() {
         res.status(400).json({ status: false, message: error.message });
       }
     });
-
-    app.get("/orderTracking/:email", async(req, res) => {
-      const email = req.params.email;
-      const query = {email};
-      const result = await orderCollection.find(query).sort({createdAt: -1}).toArray();
-      res.send(result)
-    });
-
     app.get("/delivery-order/:email", async (req, res) => {
       try {
         const email = req.params.email;
