@@ -277,6 +277,7 @@ async function run() {
           $set: {
             verified: true,
             workPermitStatus: "Accepted",
+            availabilityStatus: true,
           },
         };
         const updateResult = await usersCollection.updateOne(
