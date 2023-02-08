@@ -22,8 +22,8 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    await client.connect();
-    console.log('DB connection')
+    // await client.connect();
+    // console.log('DB connection')
 
     const productsCollection = client.db("fastGrocer").collection("products");
     const categoriesCollection = client
@@ -42,15 +42,18 @@ async function run() {
       const name = req.query.name;
       try {
         if (name) {
-            let pipeline = [
+            // let pipeline = ;
+            // let collection = client.db("fastGrocer").collection("products");
+            // result = await collection.aggregate(pipeline).toArray();
+            const result = await productsCollection.aggregate([
               {
                 $search: {
                   index: "searchProducts",
                   "autocomplete": {
-                    "query": name,
                     "path": "name",
+                    "query": req.query.name,
                     // "fuzzy": {
-                    //   "maxEdits": 2
+                    //   "maxEdits": 1
                     // },
                     "tokenOrder": "sequential"
                   }
@@ -66,9 +69,7 @@ async function run() {
                   "price": 1
                 }
               }
-            ];
-            let collection = client.db("fastGrocer").collection("products");
-            result = await collection.aggregate(pipeline).toArray();
+            ]).toArray();
             res.send(result);
         }
       }
