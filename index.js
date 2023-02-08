@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
+const jwt = require('jsonwebtoken');
 
 const port = process.env.PORT || 5000;
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
@@ -31,10 +32,44 @@ async function run() {
     const orderCollection = client.db("fastGrocer").collection("order");
     const reviewsCollection = client.db("fastGrocer").collection("reviews");
     const deliveryOrderCollection = client
-    .db("fastGrocer")
-    .collection("deliveryOrder");
+      .db("fastGrocer")
+      .collection("deliveryOrder");
     const couponsCollection = client.db("fastGrocer").collection("coupons");
 
+    app.get('/jwt/:email', async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email }
+      const user = await usersCollection.findOne(query);
+
+      if (user) {
+        const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, { expiresIn: '10d' });
+        return res.send({ accessToken: token })
+      }
+
+      res.status(403).send({ accessToken: '' });
+    });
+    
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      const email = user.email;
+      const query = { email }
+      const userData = await usersCollection.findOne(query)
+
+      if (!userData) {
+        const result = await usersCollection.insertOne(user);
+        res.send(result);
+      }
+      else {
+        res.send({ acknowledged: false })
+      }
+    });
+
+    app.get("/users", async (req, res) => {
+      const query = {};
+      const users = await usersCollection.find(query).toArray();
+      res.send(users);
+    });
+    
 
     app.post("/add-product", async (req, res) => {
       const product = req.body;
@@ -128,18 +163,6 @@ async function run() {
       res.send(product);
     });
 
-    app.post("/users", async (req, res) => {
-      const user = req.body;
-      const result = await usersCollection.insertOne(user);
-      res.send(result);
-    });
-
-    app.get("/users", async (req, res) => {
-      const query = {};
-      const users = await usersCollection.find(query).toArray();
-      res.send(users);
-    });
-
     app.post("/reviews", async (req, res) => {
       const review = req.body;
       const result = await reviewsCollection.insertOne(review);
@@ -152,13 +175,13 @@ async function run() {
       res.send(reviews);
     })
 
-    app.post("/add-coupon", async (req, res) =>{
+    app.post("/add-coupon", async (req, res) => {
       const coupon = req.body;
       const result = await couponsCollection.insertOne(coupon);
       res.send(result);
     })
 
-    app.get("/get-coupons", async(req, res) =>{
+    app.get("/get-coupons", async (req, res) => {
       const query = {};
       const result = await couponsCollection.find(query).toArray();
       res.send(result);
@@ -385,10 +408,10 @@ async function run() {
       }
     });
 
-    app.get('/trackingOrder/:email', async(req, res) => {
+    app.get('/trackingOrder/:email', async (req, res) => {
       const email = req.params.email;
-      const query = {email: email}
-      const result = await orderCollection.find(query).sort({createdAt: -1}).toArray();
+      const query = { email: email }
+      const result = await orderCollection.find(query).sort({ createdAt: -1 }).toArray();
       res.send(result)
     });
 
