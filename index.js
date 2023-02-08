@@ -384,6 +384,14 @@ async function run() {
         res.status(400).json({ status: false, message: error.message });
       }
     });
+
+    app.get('/trackingOrder/:email', async(req, res) => {
+      const email = req.params.email;
+      const query = {email: email}
+      const result = await orderCollection.find(query).sort({createdAt: -1}).toArray();
+      res.send(result)
+    });
+
     app.get("/delivery-order/:email", async (req, res) => {
       try {
         const email = req.params.email;
