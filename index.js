@@ -21,6 +21,20 @@ const client = new MongoClient(uri, {
   serverApi: ServerApiVersion.v1,
 });
 
+// middleware verify JWT
+function verifyJWT(req, res, next) {
+  const header = req.headers.authorization;
+
+  if (!header) {
+    return res.status(401).send({ message: 'unauthorized user', statusCode: 401 });
+  }
+
+  const token = header.split(' ')[1];
+
+  console.log(token);
+  next();
+};
+
 async function run() {
   try {
     const productsCollection = client.db("fastGrocer").collection("products");
@@ -48,7 +62,7 @@ async function run() {
 
       res.status(403).send({ accessToken: '' });
     });
-    
+
     app.post("/users", async (req, res) => {
       const user = req.body;
       const email = user.email;
@@ -69,7 +83,7 @@ async function run() {
       const users = await usersCollection.find(query).toArray();
       res.send(users);
     });
-    
+
 
     app.post("/add-product", async (req, res) => {
       const product = req.body;
@@ -246,7 +260,7 @@ async function run() {
       }
     });
 
-    app.get("/buyers", async (req, res) => {
+    app.get("/buyers", verifyJWT, async (req, res) => {
       const query = { role: "buyer" };
       const buyers = await usersCollection.find(query).toArray();
       res.send(buyers);
@@ -412,7 +426,7 @@ async function run() {
       const email = req.params.email;
       const query = { email: email }
       const result = await orderCollection.find(query).sort({ createdAt: -1 }).toArray();
-      res.send(result)
+      return res.send(result);
     });
 
     app.get("/delivery-order/:email", async (req, res) => {
