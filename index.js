@@ -24,15 +24,20 @@ const client = new MongoClient(uri, {
 // middleware verify JWT
 function verifyJWT(req, res, next) {
   const header = req.headers.authorization;
-
   if (!header) {
     return res.status(401).send({ message: 'unauthorized user', statusCode: 401 });
   }
 
   const token = header.split(' ')[1];
 
-  console.log(token);
-  next();
+  jwt.verify(token, process.env.ACCESS_TOKEN, function (error, decoded) {
+    if (error) {
+      return res.status(403).send({ message: 'forbidden access', statusCode: 403 })
+    }
+
+    res.decoded = decoded;
+    next();
+  })
 };
 
 async function run() {
@@ -88,35 +93,35 @@ async function run() {
       const name = req.query.name;
       try {
         if (name) {
-            // let pipeline = ;
-            // let collection = client.db("fastGrocer").collection("products");
-            // result = await collection.aggregate(pipeline).toArray();
-            const result = await productsCollection.aggregate([
-              {
-                $search: {
-                  index: "searchProducts",
-                  "autocomplete": {
-                    "path": "name",
-                    "query": req.query.name,
-                    // "fuzzy": {
-                    //   "maxEdits": 1
-                    // },
-                    "tokenOrder": "sequential"
-                  }
-                }
-              },
-              {
-                $limit: 10
-              },
-              {
-                $project: {
-                  "name": 1,
-                  "imageUrl": 1,
-                  "price": 1
+          // let pipeline = ;
+          // let collection = client.db("fastGrocer").collection("products");
+          // result = await collection.aggregate(pipeline).toArray();
+          const result = await productsCollection.aggregate([
+            {
+              $search: {
+                index: "searchProducts",
+                "autocomplete": {
+                  "path": "name",
+                  "query": req.query.name,
+                  // "fuzzy": {
+                  //   "maxEdits": 1
+                  // },
+                  "tokenOrder": "sequential"
                 }
               }
-            ]).toArray();
-            res.send(result);
+            },
+            {
+              $limit: 10
+            },
+            {
+              $project: {
+                "name": 1,
+                "imageUrl": 1,
+                "price": 1
+              }
+            }
+          ]).toArray();
+          res.send(result);
         }
       }
       catch (error) {
@@ -305,7 +310,7 @@ async function run() {
       }
     });
 
-    app.get("/buyers", verifyJWT, async (req, res) => {
+    app.get("/allBuyers", verifyJWT, async (req, res) => {
       const query = { role: "buyer" };
       const buyers = await usersCollection.find(query).toArray();
       res.send(buyers);
