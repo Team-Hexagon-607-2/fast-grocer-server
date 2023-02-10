@@ -84,6 +84,48 @@ async function run() {
       res.send(users);
     });
 
+    app.get('/searchproduct', async (req, res) => {
+      const name = req.query.name;
+      try {
+        if (name) {
+            // let pipeline = ;
+            // let collection = client.db("fastGrocer").collection("products");
+            // result = await collection.aggregate(pipeline).toArray();
+            const result = await productsCollection.aggregate([
+              {
+                $search: {
+                  index: "searchProducts",
+                  "autocomplete": {
+                    "path": "name",
+                    "query": req.query.name,
+                    // "fuzzy": {
+                    //   "maxEdits": 1
+                    // },
+                    "tokenOrder": "sequential"
+                  }
+                }
+              },
+              {
+                $limit: 10
+              },
+              {
+                $project: {
+                  "name": 1,
+                  "imageUrl": 1,
+                  "price": 1
+                }
+              }
+            ]).toArray();
+            res.send(result);
+        }
+      }
+      catch (error) {
+        console.error(error);
+        res.send([]);
+      }
+
+
+    })
 
     app.post("/add-product", async (req, res) => {
       const product = req.body;
@@ -201,12 +243,15 @@ async function run() {
       res.send(result);
     })
 
+    // search api
     app.get("/search", async (req, res) => {
       const searchText = req.query.q;
       const query = { $text: { $search: searchText } };
       const matches = await productsCollection.find(query).toArray();
       res.send(matches);
     });
+
+
 
     app.post("/wishlist", async (req, res) => {
       try {
