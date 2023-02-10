@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
+const jwt = require('jsonwebtoken');
 
 const port = process.env.PORT || 5000;
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
@@ -20,6 +21,20 @@ const client = new MongoClient(uri, {
   serverApi: ServerApiVersion.v1,
 });
 
+// middleware verify JWT
+function verifyJWT(req, res, next) {
+  const header = req.headers.authorization;
+
+  if (!header) {
+    return res.status(401).send({ message: 'unauthorized user', statusCode: 401 });
+  }
+
+  const token = header.split(' ')[1];
+
+  console.log(token);
+  next();
+};
+
 async function run() {
   try {
     const productsCollection = client.db("fastGrocer").collection("products");
@@ -34,6 +49,40 @@ async function run() {
       .db("fastGrocer")
       .collection("deliveryOrder");
     const couponsCollection = client.db("fastGrocer").collection("coupons");
+
+    app.get('/jwt/:email', async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email }
+      const user = await usersCollection.findOne(query);
+
+      if (user) {
+        const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, { expiresIn: '10d' });
+        return res.send({ accessToken: token })
+      }
+
+      res.status(403).send({ accessToken: '' });
+    });
+
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      const email = user.email;
+      const query = { email }
+      const userData = await usersCollection.findOne(query)
+
+      if (!userData) {
+        const result = await usersCollection.insertOne(user);
+        res.send(result);
+      }
+      else {
+        res.send({ acknowledged: false })
+      }
+    });
+
+    app.get("/users", async (req, res) => {
+      const query = {};
+      const users = await usersCollection.find(query).toArray();
+      res.send(users);
+    });
 
     app.get('/searchproduct', async (req, res) => {
       const name = req.query.name;
@@ -170,18 +219,6 @@ async function run() {
       res.send(product);
     });
 
-    app.post("/users", async (req, res) => {
-      const user = req.body;
-      const result = await usersCollection.insertOne(user);
-      res.send(result);
-    });
-
-    app.get("/users", async (req, res) => {
-      const query = {};
-      const users = await usersCollection.find(query).toArray();
-      res.send(users);
-    });
-
     app.post("/reviews", async (req, res) => {
       const review = req.body;
       const result = await reviewsCollection.insertOne(review);
@@ -268,7 +305,7 @@ async function run() {
       }
     });
 
-    app.get("/buyers", async (req, res) => {
+    app.get("/buyers", verifyJWT, async (req, res) => {
       const query = { role: "buyer" };
       const buyers = await usersCollection.find(query).toArray();
       res.send(buyers);
@@ -430,11 +467,11 @@ async function run() {
       }
     });
 
-    app.get('/trackingOrder/:email', async(req, res) => {
+    app.get('/trackingOrder/:email', async (req, res) => {
       const email = req.params.email;
-      const query = {email: email}
-      const result = await orderCollection.find(query).sort({createdAt: -1}).toArray();
-      res.send(result)
+      const query = { email: email }
+      const result = await orderCollection.find(query).sort({ createdAt: -1 }).toArray();
+      return res.send(result);
     });
 
     app.get("/delivery-order/:email", async (req, res) => {
