@@ -316,7 +316,7 @@ async function run() {
       res.send(buyers);
     });
 
-    app.get("/deliverymen", async (req, res) => {
+    app.get("/allDeliverymen", verifyJWT, async (req, res) => {
       const query = { role: "delivery man" };
       const deliverymen = await usersCollection.find(query).toArray();
       res.send(deliverymen);
@@ -493,7 +493,7 @@ async function run() {
       }
     });
 
-    app.get("/order", async (req, res) => {
+    app.get("/allOrder", verifyJWT, async (req, res) => {
       try {
         const order = await orderCollection
           .find({})
@@ -505,6 +505,7 @@ async function run() {
         res.status(400).json({ status: false, message: error.message });
       }
     });
+
     app.get("/cancel-order", async (req, res) => {
       try {
         const order = await orderCollection
