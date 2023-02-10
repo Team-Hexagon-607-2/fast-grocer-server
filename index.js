@@ -31,10 +31,52 @@ async function run() {
     const orderCollection = client.db("fastGrocer").collection("order");
     const reviewsCollection = client.db("fastGrocer").collection("reviews");
     const deliveryOrderCollection = client
-    .db("fastGrocer")
-    .collection("deliveryOrder");
+      .db("fastGrocer")
+      .collection("deliveryOrder");
     const couponsCollection = client.db("fastGrocer").collection("coupons");
 
+    app.get('/searchproduct', async (req, res) => {
+      const name = req.query.name;
+      try {
+        if (name) {
+            // let pipeline = ;
+            // let collection = client.db("fastGrocer").collection("products");
+            // result = await collection.aggregate(pipeline).toArray();
+            const result = await productsCollection.aggregate([
+              {
+                $search: {
+                  index: "searchProducts",
+                  "autocomplete": {
+                    "path": "name",
+                    "query": req.query.name,
+                    // "fuzzy": {
+                    //   "maxEdits": 1
+                    // },
+                    "tokenOrder": "sequential"
+                  }
+                }
+              },
+              {
+                $limit: 10
+              },
+              {
+                $project: {
+                  "name": 1,
+                  "imageUrl": 1,
+                  "price": 1
+                }
+              }
+            ]).toArray();
+            res.send(result);
+        }
+      }
+      catch (error) {
+        console.error(error);
+        res.send([]);
+      }
+
+
+    })
 
     app.post("/add-product", async (req, res) => {
       const product = req.body;
@@ -152,24 +194,27 @@ async function run() {
       res.send(reviews);
     })
 
-    app.post("/add-coupon", async (req, res) =>{
+    app.post("/add-coupon", async (req, res) => {
       const coupon = req.body;
       const result = await couponsCollection.insertOne(coupon);
       res.send(result);
     })
 
-    app.get("/get-coupons", async(req, res) =>{
+    app.get("/get-coupons", async (req, res) => {
       const query = {};
       const result = await couponsCollection.find(query).toArray();
       res.send(result);
     })
 
+    // search api
     app.get("/search", async (req, res) => {
       const searchText = req.query.q;
       const query = { $text: { $search: searchText } };
       const matches = await productsCollection.find(query).toArray();
       res.send(matches);
     });
+
+
 
     app.post("/wishlist", async (req, res) => {
       try {
