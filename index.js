@@ -145,7 +145,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/products", async (req, res) => {
+    app.get("/all-products", verifyJWT, async (req, res) => {
       const query = {};
       const products = await productsCollection.find(query).toArray();
       res.send(products);
