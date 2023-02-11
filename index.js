@@ -152,12 +152,8 @@ async function run() {
     });
 
     app.get("/AllProducts", async (req, res) => {
-      const page = parseInt(req.query.page);
-      const size = parseInt(req.query.size);
-
       const query = {};
-      const cursor = productsCollection.find(query);
-      const products = await cursor.skip(page * size).limit(size).toArray();
+      const products = await productsCollection.find(query).toArray();
       const count = await productsCollection.estimatedDocumentCount();
       res.send({ products, count });
     });
