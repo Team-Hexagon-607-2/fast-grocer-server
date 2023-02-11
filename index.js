@@ -132,7 +132,7 @@ async function run() {
 
     })
 
-    app.post("/add-product", async (req, res) => {
+    app.post("/add-product", verifyJWT, async (req, res) => {
       const product = req.body;
       const result = await productsCollection.insertOne(product);
       res.send(result);
@@ -140,7 +140,7 @@ async function run() {
 
     app.delete("/product-delete/:id", async (req, res) => {
       const id = req.params.id;
-      const query = {_id: ObjectId(id)};
+      const query = { _id: ObjectId(id) };
       const result = await productsCollection.deleteOne(query);
       res.send(result);
     });
@@ -439,14 +439,14 @@ async function run() {
 
     app.get("/users/:id", async (req, res) => {
       const id = req.params.id;
-      const query = { _id: ObjectId (id) };
+      const query = { _id: ObjectId(id) };
       const user = await usersCollection.findOne(query);
       res.send(user);
     });
 
     app.delete("/users/:id", async (req, res) => {
       const id = req.params.id;
-      const query = {_id: ObjectId(id)};
+      const query = { _id: ObjectId(id) };
       const result = await productsCollection.deleteOne(query);
       res.send(result);
     });
@@ -500,7 +500,7 @@ async function run() {
       }
     });
 
-    app.get("/allOrder", verifyJWT, async (req, res) => {
+    app.get("/allOrders", verifyJWT, async (req, res) => {
       try {
         const order = await orderCollection
           .find({})
