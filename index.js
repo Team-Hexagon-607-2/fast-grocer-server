@@ -138,6 +138,13 @@ async function run() {
       res.send(result);
     });
 
+    app.delete("/product-delete/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = {_id: ObjectId(id)};
+      const result = await productsCollection.deleteOne(query);
+      res.send(result);
+    });
+
     app.get("/products", async (req, res) => {
       const query = {};
       const products = await productsCollection.find(query).toArray();
@@ -432,15 +439,15 @@ async function run() {
 
     app.get("/users/:id", async (req, res) => {
       const id = req.params.id;
-      const query = { _id: ObjectId(id) };
+      const query = { _id: ObjectId (id) };
       const user = await usersCollection.findOne(query);
       res.send(user);
     });
 
     app.delete("/users/:id", async (req, res) => {
       const id = req.params.id;
-      const filter = { _id: ObjectId(id) };
-      const result = await usersCollection.deleteOne(filter);
+      const query = {_id: ObjectId(id)};
+      const result = await productsCollection.deleteOne(query);
       res.send(result);
     });
 
