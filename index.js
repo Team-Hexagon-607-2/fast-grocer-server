@@ -24,6 +24,7 @@ const client = new MongoClient(uri, {
 // middleware verify JWT
 function verifyJWT(req, res, next) {
   const header = req.headers.authorization;
+
   if (!header) {
     return res.status(401).send({ message: 'unauthorized user', statusCode: 401 });
   }
@@ -35,10 +36,11 @@ function verifyJWT(req, res, next) {
       return res.status(403).send({ message: 'forbidden access', statusCode: 403 })
     }
 
-    res.decoded = decoded;
+    req.decoded = decoded;
     next();
   })
 };
+
 
 async function run() {
   try {
@@ -67,6 +69,23 @@ async function run() {
 
       res.status(403).send({ accessToken: '' });
     });
+
+    const verifyAdmin = async (req, res, next) => {
+      const decodedEmail = req.decoded.email;
+      const email = req.query.email;
+
+      if (decodedEmail !== email) {
+        return res.status(403).send({ message: 'forbidden access', statusCode: 403 });
+      }
+
+      const filter = { email: email };
+      const DBUser = await usersCollection.findOne(filter);
+      if (DBUser.role !== 'admin') {
+        return res.status(403).send({ message: 'forbidden access', statusCode: 403 });
+      }
+
+      next()
+    };
 
     app.post("/users", async (req, res) => {
       const user = req.body;
@@ -128,11 +147,9 @@ async function run() {
         console.error(error);
         res.send([]);
       }
+    });
 
-
-    })
-
-    app.post("/add-product", verifyJWT, async (req, res) => {
+    app.post("/add-product", verifyJWT, verifyAdmin, async (req, res) => {
       const product = req.body;
       const result = await productsCollection.insertOne(product);
       res.send(result);
@@ -145,7 +162,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/all-products", verifyJWT, async (req, res) => {
+    app.get("/all-products", verifyJWT, verifyAdmin, async (req, res) => {
       const query = {};
       const products = await productsCollection.find(query).toArray();
       res.send(products);
@@ -245,7 +262,7 @@ async function run() {
       res.send(result);
     })
 
-    app.get("/get-coupons", verifyJWT, async (req, res) => {
+    app.get("/get-coupons", verifyJWT, verifyAdmin, async (req, res) => {
       const query = {};
       const result = await couponsCollection.find(query).toArray();
       res.send(result);
@@ -258,8 +275,6 @@ async function run() {
       const matches = await productsCollection.find(query).toArray();
       res.send(matches);
     });
-
-
 
     app.post("/wishlist", async (req, res) => {
       try {
@@ -313,13 +328,13 @@ async function run() {
       }
     });
 
-    app.get("/allBuyers", verifyJWT, async (req, res) => {
+    app.get("/allBuyers", verifyJWT, verifyAdmin, async (req, res) => {
       const query = { role: "buyer" };
       const buyers = await usersCollection.find(query).toArray();
       res.send(buyers);
     });
 
-    app.get("/allDeliverymen", verifyJWT, async (req, res) => {
+    app.get("/allDeliverymen", verifyJWT, verifyAdmin, async (req, res) => {
       const query = { role: "delivery man" };
       const deliverymen = await usersCollection.find(query).toArray();
       res.send(deliverymen);
@@ -447,8 +462,7 @@ async function run() {
       res.send(result);
     });
 
-    //Order Route -- atiqulislam
-
+    //Order Route 
     app.post("/order", async (req, res) => {
       try {
         const newData = req.body;
@@ -461,6 +475,7 @@ async function run() {
         res.status(400).json({ status: false, message: error.message });
       }
     });
+
     app.get("/order/:email", async (req, res) => {
       try {
         const email = req.params.email;
@@ -496,7 +511,7 @@ async function run() {
       }
     });
 
-    app.get("/allOrders", verifyJWT, async (req, res) => {
+    app.get("/allOrders", verifyJWT, verifyAdmin, async (req, res) => {
       try {
         const order = await orderCollection
           .find({})
@@ -555,6 +570,7 @@ async function run() {
         res.status(400).json({ status: false, message: error.message });
       }
     });
+
     app.patch("/delivery-order/:id", async (req, res) => {
       try {
         const id = req.params.id;
@@ -573,6 +589,7 @@ async function run() {
         res.status(400).json({ status: false, message: error.message });
       }
     });
+    
     app.patch("/delivery-complete/:id", async (req, res) => {
       try {
         const id = req.params.id;
@@ -594,6 +611,7 @@ async function run() {
         res.status(400).json({ status: false, message: error.message });
       }
     });
+
     app.patch("/cancel-order/:id", async (req, res) => {
       try {
         const id = req.params.id;
@@ -691,7 +709,6 @@ async function run() {
         res.status(500).json({ status: false, message: error.message });
       }
     });
-    ////////////////////////////////////////////////////////////////
   } finally {
   }
 }
