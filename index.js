@@ -245,7 +245,7 @@ async function run() {
       res.send(result);
     })
 
-    app.get("/get-coupons", async (req, res) => {
+    app.get("/get-coupons", verifyJWT, async (req, res) => {
       const query = {};
       const result = await couponsCollection.find(query).toArray();
       res.send(result);
