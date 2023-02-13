@@ -256,7 +256,7 @@ async function run() {
       res.send(reviews);
     })
 
-    app.post("/add-coupon", async (req, res) => {
+    app.post("/add-coupon", verifyJWT, verifyAdmin, async (req, res) => {
       const coupon = req.body;
       const result = await couponsCollection.insertOne(coupon);
       res.send(result);
@@ -267,6 +267,13 @@ async function run() {
       const result = await couponsCollection.find(query).toArray();
       res.send(result);
     })
+
+    app.delete("/delete-coupon/:id", verifyJWT, verifyAdmin, async(req, res) => {
+      const id = req.params.id;
+      const query = {_id: ObjectId(id)};
+      const result = await couponsCollection.deleteOne(query);
+      res.send(result);
+    });
 
     // search api
     app.get("/search", async (req, res) => {
