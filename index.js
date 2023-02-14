@@ -237,13 +237,6 @@ async function run() {
       res.send(categories);
     });
 
-    // app.get("/products/:id", async (req, res) => {
-    //   const id = req.params.id;
-    //   const query = { _id: ObjectId(id) };
-    //   const product = await productsCollection.findOne(query);
-    //   res.send(product);
-    // });
-
     app.post("/reviews", async (req, res) => {
       const review = req.body;
       const result = await reviewsCollection.insertOne(review);
