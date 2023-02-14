@@ -31,9 +31,16 @@ function verifyJWT(req, res, next) {
 
   const token = header.split(' ')[1];
 
-  console.log(token);
-  next();
+  jwt.verify(token, process.env.ACCESS_TOKEN, function (error, decoded) {
+    if (error) {
+      return res.status(403).send({ message: 'forbidden access', statusCode: 403 })
+    }
+
+    req.decoded = decoded;
+    next();
+  })
 };
+
 
 async function run() {
   try {
@@ -63,6 +70,23 @@ async function run() {
       res.status(403).send({ accessToken: '' });
     });
 
+    const verifyAdmin = async (req, res, next) => {
+      const decodedEmail = req.decoded.email;
+      const email = req.query.email;
+
+      if (decodedEmail !== email) {
+        return res.status(403).send({ message: 'forbidden access', statusCode: 403 });
+      }
+
+      const filter = { email: email };
+      const DBUser = await usersCollection.findOne(filter);
+      if (DBUser.role !== 'admin') {
+        return res.status(403).send({ message: 'forbidden access', statusCode: 403 });
+      }
+
+      next()
+    };
+
     app.post("/users", async (req, res) => {
       const user = req.body;
       const email = user.email;
@@ -78,7 +102,7 @@ async function run() {
       }
     });
 
-    app.get("/users", async (req, res) => {
+    app.get("/users", verifyJWT, verifyAdmin, async (req, res) => {
       const query = {};
       const users = await usersCollection.find(query).toArray();
       res.send(users);
@@ -88,64 +112,65 @@ async function run() {
       const name = req.query.name;
       try {
         if (name) {
-            // let pipeline = ;
-            // let collection = client.db("fastGrocer").collection("products");
-            // result = await collection.aggregate(pipeline).toArray();
-            const result = await productsCollection.aggregate([
-              {
-                $search: {
-                  index: "searchProducts",
-                  "autocomplete": {
-                    "path": "name",
-                    "query": req.query.name,
-                    // "fuzzy": {
-                    //   "maxEdits": 1
-                    // },
-                    "tokenOrder": "sequential"
-                  }
-                }
-              },
-              {
-                $limit: 10
-              },
-              {
-                $project: {
-                  "name": 1,
-                  "imageUrl": 1,
-                  "price": 1
+          // let pipeline = ;
+          // let collection = client.db("fastGrocer").collection("products");
+          // result = await collection.aggregate(pipeline).toArray();
+          const result = await productsCollection.aggregate([
+            {
+              $search: {
+                index: "searchProducts",
+                "autocomplete": {
+                  "path": "name",
+                  "query": req.query.name,
+                  // "fuzzy": {
+                  //   "maxEdits": 1
+                  // },
+                  "tokenOrder": "sequential"
                 }
               }
-            ]).toArray();
-            res.send(result);
+            },
+            {
+              $limit: 10
+            },
+            {
+              $project: {
+                "name": 1,
+                "imageUrl": 1,
+                "price": 1
+              }
+            }
+          ]).toArray();
+          res.send(result);
         }
       }
       catch (error) {
         console.error(error);
         res.send([]);
       }
+    });
 
-
-    })
-
-    app.post("/add-product", async (req, res) => {
+    app.post("/add-product", verifyJWT, verifyAdmin, async (req, res) => {
       const product = req.body;
       const result = await productsCollection.insertOne(product);
       res.send(result);
     });
 
-    app.get("/products", async (req, res) => {
+    app.delete("/product-delete/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await productsCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    app.get("/all-products", verifyJWT, verifyAdmin, async (req, res) => {
       const query = {};
       const products = await productsCollection.find(query).toArray();
       res.send(products);
     });
 
     app.get("/AllProducts", async (req, res) => {
-      const page = parseInt(req.query.page);
-      const size = parseInt(req.query.size);
-
       const query = {};
-      const cursor = productsCollection.find(query);
-      const products = await cursor.skip(page * size).limit(size).toArray();
+      const products = await productsCollection.find(query).toArray();
       const count = await productsCollection.estimatedDocumentCount();
       res.send({ products, count });
     });
@@ -212,13 +237,6 @@ async function run() {
       res.send(categories);
     });
 
-    app.get("/products/:id", async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: ObjectId(id) };
-      const product = await productsCollection.findOne(query);
-      res.send(product);
-    });
-
     app.post("/reviews", async (req, res) => {
       const review = req.body;
       const result = await reviewsCollection.insertOne(review);
@@ -231,17 +249,24 @@ async function run() {
       res.send(reviews);
     })
 
-    app.post("/add-coupon", async (req, res) => {
+    app.post("/add-coupon", verifyJWT, verifyAdmin, async (req, res) => {
       const coupon = req.body;
       const result = await couponsCollection.insertOne(coupon);
       res.send(result);
     })
 
-    app.get("/get-coupons", async (req, res) => {
+    app.get("/get-coupons", verifyJWT, verifyAdmin, async (req, res) => {
       const query = {};
       const result = await couponsCollection.find(query).toArray();
       res.send(result);
     })
+
+    app.delete("/delete-coupon/:id", verifyJWT, verifyAdmin, async(req, res) => {
+      const id = req.params.id;
+      const query = {_id: ObjectId(id)};
+      const result = await couponsCollection.deleteOne(query);
+      res.send(result);
+    });
 
     // search api
     app.get("/search", async (req, res) => {
@@ -250,8 +275,6 @@ async function run() {
       const matches = await productsCollection.find(query).toArray();
       res.send(matches);
     });
-
-
 
     app.post("/wishlist", async (req, res) => {
       try {
@@ -305,13 +328,13 @@ async function run() {
       }
     });
 
-    app.get("/buyers", verifyJWT, async (req, res) => {
+    app.get("/allBuyers", verifyJWT, verifyAdmin, async (req, res) => {
       const query = { role: "buyer" };
       const buyers = await usersCollection.find(query).toArray();
       res.send(buyers);
     });
 
-    app.get("/deliverymen", async (req, res) => {
+    app.get("/allDeliverymen", verifyJWT, verifyAdmin, async (req, res) => {
       const query = { role: "delivery man" };
       const deliverymen = await usersCollection.find(query).toArray();
       res.send(deliverymen);
@@ -434,13 +457,12 @@ async function run() {
 
     app.delete("/users/:id", async (req, res) => {
       const id = req.params.id;
-      const filter = { _id: ObjectId(id) };
-      const result = await usersCollection.deleteOne(filter);
+      const query = { _id: ObjectId(id) };
+      const result = await productsCollection.deleteOne(query);
       res.send(result);
     });
 
-    //Order Route -- atiqulislam
-
+    //Order Route 
     app.post("/order", async (req, res) => {
       try {
         const newData = req.body;
@@ -453,6 +475,7 @@ async function run() {
         res.status(400).json({ status: false, message: error.message });
       }
     });
+
     app.get("/order/:email", async (req, res) => {
       try {
         const email = req.params.email;
@@ -488,7 +511,7 @@ async function run() {
       }
     });
 
-    app.get("/order", async (req, res) => {
+    app.get("/allOrders", verifyJWT, verifyAdmin, async (req, res) => {
       try {
         const order = await orderCollection
           .find({})
@@ -500,6 +523,7 @@ async function run() {
         res.status(400).json({ status: false, message: error.message });
       }
     });
+
     app.get("/cancel-order", async (req, res) => {
       try {
         const order = await orderCollection
@@ -546,6 +570,7 @@ async function run() {
         res.status(400).json({ status: false, message: error.message });
       }
     });
+
     app.patch("/delivery-order/:id", async (req, res) => {
       try {
         const id = req.params.id;
@@ -564,6 +589,7 @@ async function run() {
         res.status(400).json({ status: false, message: error.message });
       }
     });
+    
     app.patch("/delivery-complete/:id", async (req, res) => {
       try {
         const id = req.params.id;
@@ -585,6 +611,7 @@ async function run() {
         res.status(400).json({ status: false, message: error.message });
       }
     });
+
     app.patch("/cancel-order/:id", async (req, res) => {
       try {
         const id = req.params.id;
@@ -682,7 +709,6 @@ async function run() {
         res.status(500).json({ status: false, message: error.message });
       }
     });
-    ////////////////////////////////////////////////////////////////
   } finally {
   }
 }
