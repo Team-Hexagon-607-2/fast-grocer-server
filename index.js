@@ -162,17 +162,10 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/all-products", verifyJWT, verifyAdmin, async (req, res) => {
+    app.get("/allProducts", async (req, res) => {
       const query = {};
       const products = await productsCollection.find(query).toArray();
       res.send(products);
-    });
-
-    app.get("/AllProducts", async (req, res) => {
-      const query = {};
-      const products = await productsCollection.find(query).toArray();
-      const count = await productsCollection.estimatedDocumentCount();
-      res.send({ products, count });
     });
 
     app.get("/products/:id", async (req, res) => {
@@ -255,11 +248,11 @@ async function run() {
       res.send(result);
     })
 
-    app.get("/get-coupons", verifyJWT, verifyAdmin, async (req, res) => {
+    app.get("/get-coupons", verifyJWT, async (req, res) => {
       const query = {};
       const result = await couponsCollection.find(query).toArray();
       res.send(result);
-    })
+    });
 
     app.delete("/delete-coupon/:id", verifyJWT, verifyAdmin, async(req, res) => {
       const id = req.params.id;
