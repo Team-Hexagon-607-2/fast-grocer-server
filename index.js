@@ -254,9 +254,9 @@ async function run() {
       res.send(result);
     });
 
-    app.delete("/delete-coupon/:id", verifyJWT, verifyAdmin, async(req, res) => {
+    app.delete("/delete-coupon/:id", verifyJWT, verifyAdmin, async (req, res) => {
       const id = req.params.id;
-      const query = {_id: ObjectId(id)};
+      const query = { _id: ObjectId(id) };
       const result = await couponsCollection.deleteOne(query);
       res.send(result);
     });
@@ -468,6 +468,31 @@ async function run() {
       res.send(user);
     });
 
+    app.put("/user/:email", verifyJWT, async (req, res) => {
+      const user = req.body;
+      const email = req.params.email;
+      const filter = { email };
+      
+      const option = { upsert: true };
+      const updatedDoc = {
+        $set: {
+          name: user?.updateName,
+          image: user?.updateImage,
+          contact: user?.updateContact
+        }
+      };
+      
+      const result = await usersCollection.updateOne(filter, updatedDoc, option);
+      res.send(result);
+    });
+
+    app.get("/user/:email", verifyJWT, async(req, res) => {
+      const email = req.params.email;
+      const query = {email};
+      const result = await usersCollection.findOne(query);
+      res.send(result);
+    });
+
     app.delete("/users/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
@@ -602,7 +627,7 @@ async function run() {
         res.status(400).json({ status: false, message: error.message });
       }
     });
-    
+
     app.patch("/delivery-complete/:id", async (req, res) => {
       try {
         const id = req.params.id;
