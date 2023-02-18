@@ -486,6 +486,13 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/user/:email", verifyJWT, async(req, res) => {
+      const email = req.params.email;
+      const query = {email};
+      const result = await usersCollection.findOne(query);
+      res.send(result);
+    });
+
     app.delete("/users/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
