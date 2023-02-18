@@ -410,6 +410,26 @@ async function run() {
       }
     })
 
+    app.put("/deliveryman-toggle-availability", async (req, res) => {
+      const email = req.query.email;
+      const filter = { email: email };
+      const result = await usersCollection.findOne(filter);
+      if (result) {
+        const updatedDoc = {
+          $set: {
+            availabilityStatus: !availabilityStatus,
+          },
+        };
+        const updateResult = await usersCollection.updateOne(
+          filter,
+          updatedDoc
+        );
+        res.send(updateResult);
+      } else {
+        return;
+      }
+    })
+
     app.get('/delivered-orders', async (req, res) => {
       const email = req.query.email;
       const query = {
