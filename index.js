@@ -448,7 +448,7 @@ async function run() {
       res.send(user);
     });
 
-    app.put("/user/:email", async (req, res) => {
+    app.put("/user/:email", verifyJWT, async (req, res) => {
       const user = req.body;
       const email = req.params.email;
       const filter = { email };
@@ -456,9 +456,9 @@ async function run() {
       const option = { upsert: true };
       const updatedDoc = {
         $set: {
-          name: user?.name,
-          image: user?.image,
-          contact: user?.contact,
+          name: user?.updateName,
+          image: user?.updateImage,
+          contact: user?.updateContact
         }
       };
       
