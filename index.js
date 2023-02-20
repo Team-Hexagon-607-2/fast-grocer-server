@@ -87,6 +87,40 @@ async function run() {
       next()
     };
 
+    const verifyBuyer = async (req, res, next) => {
+      const decodedEmail = req.decoded.email;
+      const email = req.query.email;
+
+      if (decodedEmail !== email) {
+        return res.status(403).send({ message: 'forbidden access', statusCode: 403 });
+      }
+
+      const filter = { email: email };
+      const DBUser = await usersCollection.findOne(filter);
+      if (DBUser.role !== 'buyer') {
+        return res.status(403).send({ message: 'forbidden access', statusCode: 403 });
+      }
+
+      next()
+    };
+
+    const verifyDeliveryMain = async (req, res, next) => {
+      const decodedEmail = req.decoded.email;
+      const email = req.query.email;
+
+      if (decodedEmail !== email) {
+        return res.status(403).send({ message: 'forbidden access', statusCode: 403 });
+      }
+
+      const filter = { email: email };
+      const DBUser = await usersCollection.findOne(filter);
+      if (DBUser.role !== 'delivery man') {
+        return res.status(403).send({ message: 'forbidden access', statusCode: 403 });
+      }
+
+      next()
+    };
+
     app.post("/users", async (req, res) => {
       const user = req.body;
       const email = user.email;
@@ -514,7 +548,7 @@ async function run() {
       }
     });
 
-    app.get("/order/:email", async (req, res) => {
+    app.get("/order/:email", verifyJWT, verifyBuyer, async (req, res) => {
       try {
         const email = req.params.email;
         const order = await orderCollection
