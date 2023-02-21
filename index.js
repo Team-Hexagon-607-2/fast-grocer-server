@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
+const jwt = require('jsonwebtoken');
 
 const port = process.env.PORT || 5000;
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
@@ -20,6 +21,27 @@ const client = new MongoClient(uri, {
   serverApi: ServerApiVersion.v1,
 });
 
+// middleware verify JWT
+function verifyJWT(req, res, next) {
+  const header = req.headers.authorization;
+
+  if (!header) {
+    return res.status(401).send({ message: 'unauthorized user', statusCode: 401 });
+  }
+
+  const token = header.split(' ')[1];
+
+  jwt.verify(token, process.env.ACCESS_TOKEN, function (error, decoded) {
+    if (error) {
+      return res.status(403).send({ message: 'forbidden access', statusCode: 403 })
+    }
+
+    req.decoded = decoded;
+    next();
+  })
+};
+
+
 async function run() {
   try {
     const productsCollection = client.db("fastGrocer").collection("products");
@@ -35,68 +57,115 @@ async function run() {
       .collection("deliveryOrder");
     const couponsCollection = client.db("fastGrocer").collection("coupons");
 
+    app.get('/jwt/:email', async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email }
+      const user = await usersCollection.findOne(query);
+
+      if (user) {
+        const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, { expiresIn: '10d' });
+        return res.send({ accessToken: token })
+      }
+
+      res.status(403).send({ accessToken: '' });
+    });
+
+    const verifyAdmin = async (req, res, next) => {
+      const decodedEmail = req.decoded.email;
+      const email = req.query.email;
+
+      if (decodedEmail !== email) {
+        return res.status(403).send({ message: 'forbidden access', statusCode: 403 });
+      }
+
+      const filter = { email: email };
+      const DBUser = await usersCollection.findOne(filter);
+      if (DBUser.role !== 'admin') {
+        return res.status(403).send({ message: 'forbidden access', statusCode: 403 });
+      }
+
+      next()
+    };
+
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      const email = user.email;
+      const query = { email }
+      const userData = await usersCollection.findOne(query)
+
+      if (!userData) {
+        const result = await usersCollection.insertOne(user);
+        res.send(result);
+      }
+      else {
+        res.send({ acknowledged: false })
+      }
+    });
+
+    app.get("/users", verifyJWT, verifyAdmin, async (req, res) => {
+      const query = {};
+      const users = await usersCollection.find(query).toArray();
+      res.send(users);
+    });
+
     app.get('/searchproduct', async (req, res) => {
       // const name = req.query.name;
       try {
         if (req.query.name) {
-            // let pipeline = ;
-            // let collection = client.db("fastGrocer").collection("products");
-            // result = await collection.aggregate(pipeline).toArray();
-            const result = await productsCollection.aggregate([
-              {
-                $search: {
-                  index: "searchProducts",
-                  "autocomplete": {
-                    "path": "name",
-                    "query": req.query.name,
-                    // "fuzzy": {
-                    //   "maxEdits": 1
-                    // },
-                    "tokenOrder": "sequential"
-                  }
-                }
-              },
-              {
-                $limit: 10
-              },
-              {
-                $project: {
-                  "name": 1,
-                  "imageUrl": 1,
-                  "price": 1
+          // let pipeline = ;
+          // let collection = client.db("fastGrocer").collection("products");
+          // result = await collection.aggregate(pipeline).toArray();
+          const result = await productsCollection.aggregate([
+            {
+              $search: {
+                index: "searchProducts",
+                "autocomplete": {
+                  "path": "name",
+                  "query": req.query.name,
+                  // "fuzzy": {
+                  //   "maxEdits": 1
+                  // },
+                  "tokenOrder": "sequential"
                 }
               }
-            ]).toArray();
-            res.send(result);
+            },
+            {
+              $limit: 10
+            },
+            {
+              $project: {
+                "name": 1,
+                "imageUrl": 1,
+                "price": 1
+              }
+            }
+          ]).toArray();
+          res.send(result);
         }
       }
       catch (error) {
         console.log(error);
         res.send([]);
       }
-    })
+    });
 
-    app.post("/add-product", async (req, res) => {
+    app.post("/add-product", verifyJWT, verifyAdmin, async (req, res) => {
       const product = req.body;
       const result = await productsCollection.insertOne(product);
       res.send(result);
     });
 
-    app.get("/products", async (req, res) => {
+    app.delete("/product-delete/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await productsCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    app.get("/allProducts", async (req, res) => {
       const query = {};
       const products = await productsCollection.find(query).toArray();
       res.send(products);
-    });
-
-    app.get("/AllProducts", async (req, res) => {
-      const page = parseInt(req.query.page);
-      const size = parseInt(req.query.size);
-
-      const query = {};
-      const cursor = productsCollection.find(query);
-      const products = await cursor.skip(page * size).limit(size).toArray();
-      const count = await productsCollection.estimatedDocumentCount();
-      res.send({ products, count });
     });
 
     app.get("/products/:id", async (req, res) => {
@@ -161,25 +230,6 @@ async function run() {
       res.send(categories);
     });
 
-    app.get("/products/:id", async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: ObjectId(id) };
-      const product = await productsCollection.findOne(query);
-      res.send(product);
-    });
-
-    app.post("/users", async (req, res) => {
-      const user = req.body;
-      const result = await usersCollection.insertOne(user);
-      res.send(result);
-    });
-
-    app.get("/users", async (req, res) => {
-      const query = {};
-      const users = await usersCollection.find(query).toArray();
-      res.send(users);
-    });
-
     app.post("/reviews", async (req, res) => {
       const review = req.body;
       const result = await reviewsCollection.insertOne(review);
@@ -192,17 +242,24 @@ async function run() {
       res.send(reviews);
     })
 
-    app.post("/add-coupon", async (req, res) => {
+    app.post("/add-coupon", verifyJWT, verifyAdmin, async (req, res) => {
       const coupon = req.body;
       const result = await couponsCollection.insertOne(coupon);
       res.send(result);
     })
 
-    app.get("/get-coupons", async (req, res) => {
+    app.get("/get-coupons", verifyJWT, async (req, res) => {
       const query = {};
       const result = await couponsCollection.find(query).toArray();
       res.send(result);
-    })
+    });
+
+    app.delete("/delete-coupon/:id", verifyJWT, verifyAdmin, async(req, res) => {
+      const id = req.params.id;
+      const query = {_id: ObjectId(id)};
+      const result = await couponsCollection.deleteOne(query);
+      res.send(result);
+    });
 
     // search api
     app.get("/search", async (req, res) => {
@@ -211,8 +268,6 @@ async function run() {
       const matches = await productsCollection.find(query).toArray();
       res.send(matches);
     });
-
-
 
     app.post("/wishlist", async (req, res) => {
       try {
@@ -266,13 +321,13 @@ async function run() {
       }
     });
 
-    app.get("/buyers", async (req, res) => {
+    app.get("/allBuyers", verifyJWT, verifyAdmin, async (req, res) => {
       const query = { role: "buyer" };
       const buyers = await usersCollection.find(query).toArray();
       res.send(buyers);
     });
 
-    app.get("/deliverymen", async (req, res) => {
+    app.get("/allDeliverymen", verifyJWT, verifyAdmin, async (req, res) => {
       const query = { role: "delivery man" };
       const deliverymen = await usersCollection.find(query).toArray();
       res.send(deliverymen);
@@ -355,6 +410,26 @@ async function run() {
       }
     })
 
+    app.put("/deliveryman-toggle-availability", async (req, res) => {
+      const email = req.query.email;
+      const filter = { email: email };
+      const result = await usersCollection.findOne(filter);
+      if (result) {
+        const updatedDoc = {
+          $set: {
+            availabilityStatus: !availabilityStatus,
+          },
+        };
+        const updateResult = await usersCollection.updateOne(
+          filter,
+          updatedDoc
+        );
+        res.send(updateResult);
+      } else {
+        return;
+      }
+    })
+
     app.get('/delivered-orders', async (req, res) => {
       const email = req.query.email;
       const query = {
@@ -395,13 +470,12 @@ async function run() {
 
     app.delete("/users/:id", async (req, res) => {
       const id = req.params.id;
-      const filter = { _id: ObjectId(id) };
-      const result = await usersCollection.deleteOne(filter);
+      const query = { _id: ObjectId(id) };
+      const result = await productsCollection.deleteOne(query);
       res.send(result);
     });
 
-    //Order Route -- atiqulislam
-
+    //Order Route 
     app.post("/order", async (req, res) => {
       try {
         const newData = req.body;
@@ -414,6 +488,7 @@ async function run() {
         res.status(400).json({ status: false, message: error.message });
       }
     });
+
     app.get("/order/:email", async (req, res) => {
       try {
         const email = req.params.email;
@@ -428,11 +503,11 @@ async function run() {
       }
     });
 
-    app.get('/trackingOrder/:email', async(req, res) => {
+    app.get('/trackingOrder/:email', async (req, res) => {
       const email = req.params.email;
-      const query = {email: email}
-      const result = await orderCollection.find(query).sort({createdAt: -1}).toArray();
-      res.send(result)
+      const query = { email: email }
+      const result = await orderCollection.find(query).sort({ createdAt: -1 }).toArray();
+      return res.send(result);
     });
 
     app.get("/delivery-order/:email", async (req, res) => {
@@ -449,7 +524,7 @@ async function run() {
       }
     });
 
-    app.get("/order", async (req, res) => {
+    app.get("/allOrders", verifyJWT, verifyAdmin, async (req, res) => {
       try {
         const order = await orderCollection
           .find({})
@@ -461,6 +536,7 @@ async function run() {
         res.status(400).json({ status: false, message: error.message });
       }
     });
+
     app.get("/cancel-order", async (req, res) => {
       try {
         const order = await orderCollection
@@ -507,6 +583,7 @@ async function run() {
         res.status(400).json({ status: false, message: error.message });
       }
     });
+
     app.patch("/delivery-order/:id", async (req, res) => {
       try {
         const id = req.params.id;
@@ -525,6 +602,7 @@ async function run() {
         res.status(400).json({ status: false, message: error.message });
       }
     });
+    
     app.patch("/delivery-complete/:id", async (req, res) => {
       try {
         const id = req.params.id;
@@ -546,6 +624,7 @@ async function run() {
         res.status(400).json({ status: false, message: error.message });
       }
     });
+
     app.patch("/cancel-order/:id", async (req, res) => {
       try {
         const id = req.params.id;
@@ -643,7 +722,6 @@ async function run() {
         res.status(500).json({ status: false, message: error.message });
       }
     });
-    ////////////////////////////////////////////////////////////////
   } finally {
   }
 }
