@@ -548,7 +548,7 @@ async function run() {
       }
     });
 
-    app.get("/order/:email", verifyJWT, verifyBuyer, async (req, res) => {
+    app.get("/order/:email", async (req, res) => {
       try {
         const email = req.params.email;
         const order = await orderCollection
