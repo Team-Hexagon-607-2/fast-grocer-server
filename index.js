@@ -488,6 +488,12 @@ async function run() {
   } finally {
   }
 }
+//Add Product
+//   const query={}
+//   const result=await productsCollection.find(query).project({name: 1}).toArray();
+//   res.send(result);
+// })
+
 
 run().catch(console.log);
 
